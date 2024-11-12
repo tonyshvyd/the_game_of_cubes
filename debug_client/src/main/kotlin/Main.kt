@@ -7,7 +7,11 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.client.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlin.random.Random
 
 fun main() {
     val logger: Logger = LoggerFactory.getLogger("debug_client")
@@ -18,24 +22,40 @@ fun main() {
     }
 
     runBlocking {
-        client.webSocket(HttpMethod.Get, "127.0.0.1", 6969, "/") {
-            logger.debug("connected to server")
-            var flag = false;
-            for(frame in incoming) {
-                val msg =  frame as Frame.Text
-                logger.debug("received {}", msg.readText());
+        runEcho(logger, client);
+    }
+    client.close()
+}
 
-                if (!flag) {
-                    val toSend = "Hello Server!"
-                    logger.debug("sending {}", toSend)
-                    flag = true;
-                    send(toSend)
-                } else {
-                    logger.debug("sending close")
-                    close(CloseReason(CloseReason.Codes.NORMAL, "Bye"))
-                }
+suspend fun runEcho(logger: Logger, client: HttpClient) {
+    val host = "127.0.0.1"
+    val port = 6969;
+    val echo = "/echo"
+    coroutineScope {
+        launch {
+            client.webSocket(HttpMethod.Get, host, port, echo) {
+                startEcho(1, logger)
+            }
+        }
+
+        launch {
+            client.webSocket(HttpMethod.Get, host, port, echo) {
+                startEcho(2, logger)
             }
         }
     }
-    client.close()
+}
+
+suspend fun DefaultWebSocketSession.startEcho(clientNum: Int, logger: Logger) {
+    repeat(5) {
+        val sendMessage = "Message $it"
+        logger.debug("Client {} Sending {}", clientNum, sendMessage)
+        send(sendMessage);
+        val response = incoming.receive() as Frame.Text;
+        val backMessage = response.readText()
+        logger.debug("Client {} received {}", clientNum, backMessage);
+        delay(Random.nextLong(2000L, 10000L))
+    }
+    logger.debug("Closing client {}", clientNum)
+    close(CloseReason(CloseReason.Codes.NORMAL, "Echo finished $clientNum"));
 }

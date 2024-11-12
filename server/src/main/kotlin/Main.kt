@@ -5,6 +5,7 @@ import io.ktor.server.application.log
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.routing.routing
+import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
@@ -15,6 +16,7 @@ import server.battle_area.BattleArea
 import server.battle_area.PlayerView
 import server.unit.Position
 import server.unit.PositionOffset
+import java.util.UUID
 
 
 fun main() {
@@ -22,26 +24,11 @@ fun main() {
         install(WebSockets) {
             timeout
         }
-        log.debug("Starting server...")
 
         routing {
             webSocket("/") {
-                log.debug("Client connected! {}", call.request)
-                send(Frame.Text("Hello client!"))
-
-                try {
-                    for (frame in incoming) {
-                        var msg = (frame as Frame.Text).readText();
-                        log.debug("received {}", msg);
-
-                        send(Frame.Text("Go away"))
-                    }
-
-                    log.debug("Connection closed")
-                } catch (e: ClosedReceiveChannelException) {
-                    log.debug("Connection closed: {}", e.message)
-                }
             }
+            webSocket("/echo") { echoRoute() }
         }
     }.start(wait = true)
 //    val p1 = Player("player_1")
@@ -62,6 +49,18 @@ fun main() {
 
 //    p1View = match.action(p1.id, endTurn);
 //    p2View = match.action(p2.id, endTurn);
+}
+
+suspend fun DefaultWebSocketServerSession.echoRoute() {
+    val log = call.application.log;
+    val id = UUID.randomUUID();
+    log.debug("echo route connected: {}", id)
+    for (frame in incoming) {
+        var msg = (frame as Frame.Text).readText();
+        log.debug("For client - {}, received {}", id, msg);
+        send(Frame.Text("Message $msg received"));
+    }
+    log.debug("Client {} connection closed", id)
 }
 
 fun printView(v1: PlayerView, v2: PlayerView) {
