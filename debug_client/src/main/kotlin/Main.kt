@@ -22,7 +22,22 @@ fun main() {
     }
 
     runBlocking {
-        runEcho(logger, client);
+        val session = client.webSocketSession(HttpMethod.Get, "127.0.0.1", 6969, "/echo")
+        while (true) {
+            val msg = readln();
+            val command = Command.parse(msg);
+            when (command) {
+                is Command.Quit -> return@runBlocking;
+                is Command.Unknown -> logger.error("Unknown command: {}", command)
+                is Command.Move -> {
+                    session.send(command.toString())
+                    val resp = session.incoming.receive() as Frame.Text;
+                    logger.debug("Received {}", resp.readText())
+                }
+                is Command.EndTurn -> TODO()
+            }
+        }
+//        runEcho(logger, client);
     }
     client.close()
 }
