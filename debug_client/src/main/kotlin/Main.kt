@@ -13,6 +13,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
 
+const val HOST: String = "127.0.0.1"
+const val PORT: Int = 6969
+const val ECHO: String = "/echo"
+const val REGISTER: String = "/register"
+
 fun main() {
     val logger: Logger = LoggerFactory.getLogger("debug_client")
     val client = HttpClient(CIO) {
@@ -21,8 +26,9 @@ fun main() {
         }
     }
 
+    val activeSessions = mutableMapOf<Int, DefaultClientWebSocketSession>()
+
     runBlocking {
-        val session = client.webSocketSession(HttpMethod.Get, "127.0.0.1", 6969, "/echo")
         while (true) {
             val msg = readln();
             val command = Command.parse(msg);
@@ -30,9 +36,20 @@ fun main() {
                 is Command.Quit -> return@runBlocking;
                 is Command.Unknown -> logger.error("Unknown command: {}", command)
                 is Command.Move -> {
-                    session.send(command.toString())
-                    val resp = session.incoming.receive() as Frame.Text;
-                    logger.debug("Received {}", resp.readText())
+                    activeSessions[command.playerNum]?.let {
+                        it.send(command.toString())
+                        val resp = it.incoming.receive() as Frame.Text;
+                        logger.debug("Received {}", resp.readText())
+                    }
+                }
+                is Command.Register -> {
+                    if (activeSessions.contains(command.playerNum)) {
+                        logger.error("Session already exists for player {}", command.playerNum)
+                    } else {
+                        val session = client.webSocketSession(HttpMethod.Get, HOST, PORT, "/echo")
+                        activeSessions.put(command.playerNum, session)
+                        logger.debug("Connected player {}, {}", command.playerNum, session)
+                    }
                 }
                 is Command.EndTurn -> TODO()
             }

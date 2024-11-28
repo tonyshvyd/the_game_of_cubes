@@ -4,6 +4,7 @@ sealed class Command {
     data class Move(val playerNum: Int, val unitId: Int, val row: Int, val column: Int): Command()
     data class EndTurn(val playerNum: Int): Command()
     data class Unknown(val msg: String): Command()
+    data class Register(val playerNum: Int): Command()
     object Quit: Command()
 
     companion object Parser {
@@ -18,6 +19,10 @@ sealed class Command {
                     msg.startsWith("e") -> {
                         val (playerNum) = msg.split(",").drop(1).map { s -> s.toInt() }
                         return EndTurn(playerNum)
+                    }
+                    msg.startsWith("r") -> {
+                        val (playerNum) = msg.split(",").drop(1).map { s -> s.toInt() }
+                        return Register(playerNum)
                     }
                     else -> Unknown(msg)
                 }
