@@ -1,5 +1,6 @@
 package debug_client
 
+import comms_model.Command
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import io.ktor.client.engine.cio.*;
@@ -7,6 +8,8 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.client.*
 import io.ktor.websocket.*
+import io.ktor.serialization.kotlinx.*
+import kotlinx.serialization.json.*
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -23,6 +26,7 @@ fun main() {
     val client = HttpClient(CIO) {
         install(WebSockets) {
             pingIntervalMillis = 10_000
+            contentConverter = KotlinxWebsocketSerializationConverter(Json)
         }
     }
 
@@ -31,13 +35,14 @@ fun main() {
     runBlocking {
         while (true) {
             val msg = readln();
-            val command = Command.parse(msg);
+            val command = parseCommand(msg);
+            logger.debug("{}", command)
             when (command) {
                 is Command.Quit -> return@runBlocking;
                 is Command.Unknown -> logger.error("Unknown command: {}", command)
                 is Command.Move -> {
                     activeSessions[command.playerNum]?.let {
-                        it.send(command.toString())
+                        it.sendSerialized(command)
                         val resp = it.incoming.receive() as Frame.Text;
                         logger.debug("Received {}", resp.readText())
                     }
@@ -51,7 +56,13 @@ fun main() {
                         logger.debug("Connected player {}, {}", command.playerNum, session)
                     }
                 }
-                is Command.EndTurn -> TODO()
+                is Command.EndTurn -> {
+                    activeSessions[command.playerNum]?.let {
+                        it.sendSerialized(command)
+                        val resp = it.incoming.receive() as Frame.Text;
+                        logger.debug("Received {}", resp.readText())
+                    }
+                }
             }
         }
 //        runEcho(logger, client);

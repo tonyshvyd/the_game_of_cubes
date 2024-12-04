@@ -1,5 +1,7 @@
 package server
 
+import comms_model.Command
+import io.ktor.serialization.deserialize
 import io.ktor.server.application.install
 import io.ktor.server.application.log
 import io.ktor.server.cio.CIO
@@ -7,11 +9,16 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.routing.routing
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.server.websocket.WebSockets
+import io.ktor.server.websocket.receiveDeserialized
 import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
+import io.ktor.serialization.kotlinx.*
+import io.ktor.server.websocket.converter
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
+import io.ktor.websocket.serialization.receiveDeserializedBase
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.serialization.json.Json
 import server.battle_area.BattleArea
 import server.battle_area.PlayerView
 import server.unit.Position
@@ -23,6 +30,7 @@ fun main() {
     embeddedServer(CIO, 6969) {
         install(WebSockets) {
             timeout
+            contentConverter = KotlinxWebsocketSerializationConverter(Json)
         }
 
         routing {
@@ -55,8 +63,9 @@ suspend fun DefaultWebSocketServerSession.echoRoute() {
     val log = call.application.log;
     val id = UUID.randomUUID();
     log.debug("echo route connected: {}", id)
+
     for (frame in incoming) {
-        var msg = (frame as Frame.Text).readText();
+        var msg = converter!!.deserialize<Command.EndTurn>(frame);
         log.debug("For client - {}, received {}", id, msg);
         send(Frame.Text("Message $msg received"));
     }

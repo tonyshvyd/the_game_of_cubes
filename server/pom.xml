@@ -19,6 +19,7 @@
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
+                    <skipAssembly>false</skipAssembly>
                     <archive>
                         <manifest>
                             <mainClass>server.MainKt</mainClass>
@@ -33,17 +34,32 @@
         <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-server-core-jvm</artifactId>
-            <version>3.0.0</version>
+            <version>${ktor.version}</version>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-server-cio-jvm</artifactId>
-            <version>3.0.0</version>
+            <version>${ktor.version}</version>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
             <artifactId>ktor-server-websockets-jvm</artifactId>
-            <version>3.0.0</version>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.ktor</groupId>
+            <artifactId>ktor-serialization-kotlinx-json-jvm</artifactId>
+            <version>${ktor.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlinx</groupId>
+            <artifactId>kotlinx-io-core-jvm</artifactId>
+            <version>0.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>the_game_of_cubes</groupId>
+            <artifactId>comms_model</artifactId>
+            <version>1.0</version>
         </dependency>
     </dependencies>
 
